@@ -80,7 +80,9 @@ export class VideosService {
 					`Пользователь ${author.name} выпустил новое видео: ${video.title}`,
 					'upload-video',
 					`/videos/${video.slug}`,
-					user.id
+					user.id,
+					null,
+					video.id
 				)
 			})
 		)
