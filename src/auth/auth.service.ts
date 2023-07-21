@@ -83,8 +83,6 @@ export class AuthService {
 		})
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
-		user.online = true
-
 		await this.userRepository.save(user)
 
 		const tokens = await this.issueToken(user.id)
