@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable } from '@nestjs/common'
 import { InjectRepository } from '@nestjs/typeorm'
 import { UserEntity } from 'src/users/entities/user.entity'
 import { VideoEntity } from 'src/videos/entities/video.entity'
@@ -58,17 +58,17 @@ export class SearchService {
 	}
 
 	async getSearchResult(searchDto: SearchDto) {
+		const ruTranslit = translit(searchDto.query, 'ru')
+		const enTranslit = translit(searchDto.query, 'en')
+
 		const users = await this.userRepository.find({
 			where: {
 				videos: MoreThanOrEqual(1),
-				name: ILike(`%${searchDto.query}%`),
+				name: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
 			},
 			relations: returnRelationsUser,
 		})
 		let order = {}
-
-		const ruTranslit = translit(searchDto.query, 'ru')
-		const enTranslit = translit(searchDto.query, 'en')
 
 		searchDto.order === OrderEnum.NEWEST && (order['createdAt'] = 'DESC')
 		searchDto.order === OrderEnum.OLDEST && (order['createdAt'] = 'ASC')
