@@ -9,10 +9,9 @@ import {
 	WebSocketServer,
 } from '@nestjs/websockets'
 import { SocketService } from './socket.service'
-import * as process from 'process'
 import { Server, Socket } from 'socket.io'
 
-@WebSocketGateway(80, {
+@WebSocketGateway({
 	cors: {
 		origin: process.env.APP_URL,
 	},
