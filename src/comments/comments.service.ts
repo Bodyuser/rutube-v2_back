@@ -57,7 +57,8 @@ export class CommentsService {
 				`Пользователь ${author.name} оставил комментарий под вашим комментарием: ${mainComment.text}`,
 				'reply-to-comment',
 				`/videos/${video.slug}`,
-				mainComment.author.id
+				mainComment.author.id,
+				comment.id
 			)
 
 			return {
@@ -80,7 +81,8 @@ export class CommentsService {
 			`Пользователь ${author.name} оставил комментарий под вашим видео: ${video.title}`,
 			'comment-to-video',
 			`/videos/${video.slug}`,
-			video.author.id
+			video.author.id,
+			comment.id
 		)
 
 		return {
