@@ -4,6 +4,8 @@ import { Repository } from 'typeorm'
 import { InjectRepository } from '@nestjs/typeorm'
 import { returnRelationNotification } from './returnRelationNotification'
 import { UserEntity } from 'src/users/entities/user.entity'
+import { VideoEntity } from 'src/videos/entities/video.entity'
+import { CommentEntity } from 'src/comments/entities/comment.entity'
 
 @Injectable()
 export class NotificationsService {
@@ -11,7 +13,11 @@ export class NotificationsService {
 		@InjectRepository(NotificationEntity)
 		private notificationRepository: Repository<NotificationEntity>,
 		@InjectRepository(UserEntity)
-		private userRepository: Repository<UserEntity>
+		private userRepository: Repository<UserEntity>,
+		@InjectRepository(VideoEntity)
+		private videoRepository: Repository<VideoEntity>,
+		@InjectRepository(CommentEntity)
+		private commentRepository: Repository<CommentEntity>
 	) {}
 
 	async readAllNotifications(userId: string) {
@@ -65,7 +71,9 @@ export class NotificationsService {
 			| 'comment-to-video'
 			| 'strange-entrance',
 		url: string,
-		id: string
+		id: string,
+		commentId?: string,
+		videoId?: string
 	) {
 		const user = await this.userRepository.findOne({
 			where: {
@@ -74,11 +82,32 @@ export class NotificationsService {
 		})
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
+		let comment: CommentEntity = {} as CommentEntity
+		let video: VideoEntity = {} as VideoEntity
+
+		if (videoId) {
+			video = await this.videoRepository.findOne({
+				where: {
+					id: videoId,
+				},
+			})
+		}
+
+		if (commentId) {
+			comment = await this.commentRepository.findOne({
+				where: {
+					id: commentId,
+				},
+			})
+		}
+
 		const notification = this.notificationRepository.create({
 			text,
 			type,
 			url,
 			user,
+			video: video?.id ? video : null,
+			comment: comment?.id ? comment : null,
 		})
 
 		await this.notificationRepository.save(notification)
