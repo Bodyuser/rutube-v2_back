@@ -14,6 +14,7 @@ import { VideosModule } from './videos/videos.module'
 import { CommentsModule } from './comments/comments.module'
 import { NotificationsModule } from './notifications/notifications.module'
 import { FilesModule } from './files/files.module'
+import { SearchModule } from './search/search.module';
 
 @Module({
 	imports: [
@@ -34,6 +35,7 @@ import { FilesModule } from './files/files.module'
 		CommentsModule,
 		NotificationsModule,
 		FilesModule,
+		SearchModule,
 	],
 })
 export class AppModule {}
