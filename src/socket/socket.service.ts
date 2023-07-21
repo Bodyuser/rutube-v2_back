@@ -35,10 +35,6 @@ export class SocketService {
 
 		this.onlineUsers.push(data)
 
-		user.online = true
-
-		await this.userRepository.save(user)
-
 		let i = ''
 
 		let ipData: IPinfo = {} as IPinfo
@@ -91,7 +87,7 @@ export class SocketService {
 		}
 
 		return {
-			message: 'OK',
+			onlineUsers: this.onlineUsers,
 		}
 	}
 
@@ -107,10 +103,6 @@ export class SocketService {
 
 		if (!user) return
 
-		user.online = false
-
-		await this.userRepository.save(user)
-
 		const ip = await this.ipRepository.findOne({
 			relations: { user: true },
 			where: { user: { id: user.id } },
@@ -119,7 +111,7 @@ export class SocketService {
 		ip.releaseDate = new Date()
 
 		return {
-			message: 'OK',
+			onlineUsers: this.onlineUsers,
 		}
 	}
 }

@@ -30,9 +30,11 @@ export class SocketGateway
 	async handleDisconnect(client: Socket) {
 		const data = await this.socketService.leave(client.id)
 
-		this.server.emit('online-users', 'leave-user')
+		if (data.onlineUsers) {
+			this.server.emit('online-users', data.onlineUsers)
+		}
 
-		return data
+		return data.onlineUsers
 	}
 
 	@WebSocketServer()
@@ -42,8 +44,11 @@ export class SocketGateway
 	async join(@MessageBody('id') id: string, @ConnectedSocket() client: Socket) {
 		const data = await this.socketService.join(id, client.id, client.disconnect)
 
-		this.server.emit('online-users', 'join-user')
+		if (data.onlineUsers) {
+			this.server.emit('online-users', data.onlineUsers)
+			return data.onlineUsers
+		}
 
-		return data
+		return
 	}
 }
