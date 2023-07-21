@@ -113,6 +113,8 @@ export class SocketService {
 
 		ip.releaseDate = new Date()
 
+		await this.ipRepository.save(ip)
+
 		return {
 			onlineUsers: this.onlineUsers,
 		}
