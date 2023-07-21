@@ -7,13 +7,13 @@ export class IpEntity extends BaseEntity {
 	@Column()
 	ip: string
 
-	@Column()
+	@Column({ nullable: true })
 	country: string
 
-	@Column()
+	@Column({ nullable: true })
 	region: string
 
-	@Column()
+	@Column({ nullable: true })
 	city: string
 
 	@Column({ default: false })
@@ -22,13 +22,13 @@ export class IpEntity extends BaseEntity {
 	@Column({ default: false })
 	isVpn: boolean
 
-	@Column()
+	@Column({ nullable: true })
 	location: string
 
-	@Column()
+	@Column({ nullable: true })
 	timezone: string
 
-	@Column()
+	@Column({ nullable: true })
 	org: string
 
 	@Column({ nullable: true })

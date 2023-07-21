@@ -64,26 +64,29 @@ export class SocketService {
 		const ip = this.ipRepository.create({
 			...ipData,
 			location: ipData.loc,
-			isProxy: ipData.privacy.proxy,
-			isVpn: ipData.privacy.vpn,
-			org: ipData.company.name,
+			isProxy: ipData.privacy?.proxy ? ipData.privacy?.proxy : false,
+			isVpn: ipData.privacy?.vpn ? ipData.privacy?.vpn : false,
+			org: ipData.company?.name,
 			user,
 		})
 
 		await this.ipRepository.save(ip)
 
-		const hours =
-			Math.abs(
-				new Date(ip.createdAt).getTime() - new Date(lastIp.createdAt).getTime()
-			) / 36e5
+		if (lastIp?.createdAt) {
+			const hours =
+				Math.abs(
+					new Date(ip.createdAt).getTime() -
+						new Date(lastIp.createdAt).getTime()
+				) / 36e5
 
-		if (lastIp.country !== ip.country && hours < 3) {
-			await this.notificationsService.createNotification(
-				`Кто-то заходил на ваш аккаунт, местоположение входа: ${ip.country}, ${ip.city}. Поменяйте пароль, если это не вы`,
-				'strange-entrance',
-				'/profile/edit',
-				user.id
-			)
+			if (lastIp.country !== ip.country && hours < 3) {
+				await this.notificationsService.createNotification(
+					`Кто-то заходил на ваш аккаунт, местоположение входа: ${ip.country}, ${ip.city}. Поменяйте пароль, если это не вы`,
+					'strange-entrance',
+					'/profile/edit',
+					user.id
+				)
+			}
 		}
 
 		return {

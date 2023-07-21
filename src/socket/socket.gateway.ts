@@ -30,7 +30,7 @@ export class SocketGateway
 	async handleDisconnect(client: Socket) {
 		const data = await this.socketService.leave(client.id)
 
-		if (data.onlineUsers) {
+		if (data?.onlineUsers) {
 			this.server.emit('online-users', data.onlineUsers)
 		}
 
