@@ -162,6 +162,10 @@ export class CommentsService {
 				author: comment.author.returnUser(),
 				likeUsers: comment.likeUsers.map(user => user.returnUser()),
 				disLikeUsers: comment.disLikeUsers.map(user => user.returnUser()),
+				replyComments: comment.replyComments.map(com => ({
+					...com,
+					author: com.author.returnUser(),
+				})),
 			})),
 		}
 	}
