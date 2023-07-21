@@ -109,11 +109,6 @@ export class VideosController {
 		return await this.videosService.getAllVideos(getAllVideosDto)
 	}
 
-	@Get('search-list')
-	async getSearchList() {
-		return await this.videosService.getSearchList()
-	}
-
 	@Get('profile')
 	@Auth()
 	async getVideosByProfile(@User('id') id: string) {

@@ -485,32 +485,6 @@ export class VideosService {
 		}
 	}
 
-	async getSearchList() {
-		const tags = [
-			...new Set(
-				[].concat(
-					...(await this.videoRepository.find()).map(video => video.tags)
-				)
-			),
-		].map(item => item.toLowerCase())
-
-		const names = (
-			await this.userRepository.find({
-				where: {
-					followers: MoreThanOrEqual(1),
-					name: Not(ILike('channel%')),
-				},
-				relations: {
-					followers: true,
-				},
-			})
-		).map(user => user.name.toLowerCase())
-
-		const list = [...new Set(tags.concat([...names]))]
-
-		return list.sort((a, b) => a.localeCompare(b))
-	}
-
 	async getVideosByProfile(id: string) {
 		const videos = await this.videoRepository.find({
 			where: {
