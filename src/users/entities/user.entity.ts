@@ -40,9 +40,6 @@ export class UserEntity extends BaseEntity {
 	@Column({ nullable: true })
 	country: string
 
-	@Column({ default: true })
-	online: boolean
-
 	@Column({
 		type: 'enum',
 		enum: UserRoleEnum,
