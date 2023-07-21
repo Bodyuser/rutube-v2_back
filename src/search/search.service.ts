@@ -64,7 +64,11 @@ export class SearchService {
 		const users = await this.userRepository.find({
 			where: {
 				videos: MoreThanOrEqual(1),
-				name: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
+				name: In([
+					ILike(`%${ruTranslit}%`),
+					ILike(`%${enTranslit}%`),
+					ILike(`%${searchDto.query}%`),
+				]),
 			},
 			relations: returnRelationsUser,
 		})
@@ -100,21 +104,37 @@ export class SearchService {
 		const videos = await this.videoRepository.find({
 			where: [
 				{
-					title: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
+					title: In([
+						ILike(`%${ruTranslit}%`),
+						ILike(`%${enTranslit}%`),
+						ILike(`%${searchDto.query}%`),
+					]),
 					...sort,
 				},
 				{
-					description: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
+					description: In([
+						ILike(`%${ruTranslit}%`),
+						ILike(`%${enTranslit}%`),
+						ILike(`%${searchDto.query}%`),
+					]),
 					...sort,
 				},
 				{
 					author: {
-						name: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
+						name: In([
+							ILike(`%${ruTranslit}%`),
+							ILike(`%${enTranslit}%`),
+							ILike(`%${searchDto.query}%`),
+						]),
 					},
 					...sort,
 				},
 				{
-					tags: In([ILike(`%${ruTranslit}%`), ILike(`%${enTranslit}%`)]),
+					tags: In([
+						ILike(`%${ruTranslit}%`),
+						ILike(`%${enTranslit}%`),
+						ILike(`%${searchDto.query}%`),
+					]),
 					...sort,
 				},
 			],
