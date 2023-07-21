@@ -5,29 +5,13 @@ import {
 } from '@nestjs/common'
 import { VideoEntity } from './entities/video.entity'
 import { InjectRepository } from '@nestjs/typeorm'
-import {
-	And,
-	ILike,
-	In,
-	LessThanOrEqual,
-	MoreThan,
-	MoreThanOrEqual,
-	Not,
-	Repository,
-} from 'typeorm'
+import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
 import { CreateVideoDto } from './dto/create-video.dto'
 import { CategoryEntity } from 'src/categories/entities/category.entity'
 import { UserEntity } from 'src/users/entities/user.entity'
 import { UpdateVideoDto } from './dto/update-video.dto'
 import { returnRelationVideo } from './returnRelationVideo'
-import {
-	DateEnum,
-	DurationEnum,
-	GetAllVideosDto,
-	OrderEnum,
-} from './dto/get-all-videos.dto'
 import { NotificationsService } from 'src/notifications/notifications.service'
-import { returnRelationsUser } from 'src/users/returnRelationsUser'
 
 @Injectable()
 export class VideosService {
@@ -406,83 +390,6 @@ export class VideosService {
 				}
 			})
 		)
-	}
-
-	async getAllVideos(getAllVideosDto?: GetAllVideosDto) {
-		const users = await this.userRepository.find({
-			where: {
-				videos: MoreThanOrEqual(1),
-				name: ILike(`%${getAllVideosDto.query}%`),
-			},
-			relations: returnRelationsUser,
-		})
-		let order = {}
-
-		getAllVideosDto.order === OrderEnum.NEWEST && (order['createdAt'] = 'DESC')
-		getAllVideosDto.order === OrderEnum.OLDEST && (order['createdAt'] = 'ASC')
-		getAllVideosDto.order === OrderEnum.VIEWS && (order['duration'] = 'DESC')
-
-		const sort = {
-			createdAt:
-				getAllVideosDto.date === DateEnum.YEAR
-					? MoreThanOrEqual(new Date(Date.now() - 604800000 * 52))
-					: getAllVideosDto.date === DateEnum.MONTH
-					? MoreThanOrEqual(new Date(Date.now() - 604800000 * 4))
-					: getAllVideosDto.date === DateEnum.TODAY
-					? MoreThanOrEqual(new Date(Date.now() - 604800000 / 7))
-					: getAllVideosDto.date === DateEnum.WEEK
-					? MoreThanOrEqual(new Date(Date.now() - 604800000))
-					: MoreThanOrEqual(new Date(1970, 1, 1)),
-			duration:
-				getAllVideosDto.duration === DurationEnum.SHORT
-					? LessThanOrEqual(300)
-					: getAllVideosDto.duration === DurationEnum.LONG
-					? And(MoreThan(300), LessThanOrEqual(1200))
-					: getAllVideosDto.duration === DurationEnum.MEDIUM
-					? And(MoreThan(1200), LessThanOrEqual(3600))
-					: getAllVideosDto.duration === DurationEnum.MOVIE
-					? MoreThan(3600)
-					: MoreThanOrEqual(0),
-		}
-
-		const videos = await this.videoRepository.find({
-			where: [
-				{
-					title: ILike(`%${getAllVideosDto.query}%`),
-					...sort,
-				},
-				{
-					description: ILike(`%${getAllVideosDto.query}%`),
-					...sort,
-				},
-				{
-					author: {
-						name: ILike(`%${getAllVideosDto.query}%`),
-					},
-					...sort,
-				},
-				{
-					tags: ILike(`%${getAllVideosDto.query}%`),
-					...sort,
-				},
-			],
-			order,
-			relations: returnRelationVideo,
-		})
-
-		return {
-			users: users.map(user => ({
-				...user.returnUser(),
-				followers: user.followers.map(user => user.returnUser()),
-				following: user.following.map(user => user.returnUser()),
-			})),
-			videos: videos.map(video => ({
-				...video,
-				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-			})),
-		}
 	}
 
 	async getVideosByProfile(id: string) {

@@ -8,7 +8,6 @@ import {
 	Patch,
 	Post,
 	Put,
-	Query,
 	UsePipes,
 	ValidationPipe,
 } from '@nestjs/common'
@@ -17,7 +16,6 @@ import { Auth } from 'src/auth/decorators/auth.decorator'
 import { CreateVideoDto } from './dto/create-video.dto'
 import { User } from 'src/users/decorators/user.decorator'
 import { UpdateVideoDto } from './dto/update-video.dto'
-import { GetAllVideosDto } from './dto/get-all-videos.dto'
 
 @Controller('videos')
 export class VideosController {
@@ -102,11 +100,6 @@ export class VideosController {
 	@Get('category-videos')
 	async getCategoryAndVideo() {
 		return await this.videosService.getCategoryAndVideo()
-	}
-
-	@Get('')
-	async getAllVideos(@Query() getAllVideosDto: GetAllVideosDto) {
-		return await this.videosService.getAllVideos(getAllVideosDto)
 	}
 
 	@Get('profile')
