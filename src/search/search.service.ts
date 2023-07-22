@@ -10,6 +10,7 @@ import {
 	MoreThan,
 	MoreThanOrEqual,
 	Not,
+	Raw,
 	Repository,
 } from 'typeorm'
 import { DateEnum, DurationEnum, OrderEnum, SearchDto } from './dto/search.dto'
@@ -63,12 +64,11 @@ export class SearchService {
 
 		const users = await this.userRepository.find({
 			where: {
+				name: Raw(
+					alias =>
+						`${alias} ILIKE '%${ruTranslit}%' or ${alias} ILIKE '%${enTranslit}%' or ${alias} ILIKE '%${searchDto.query}%'`
+				),
 				videos: MoreThanOrEqual(1),
-				name: In([
-					ILike(`%${ruTranslit}%`),
-					ILike(`%${enTranslit}%`),
-					ILike(`%${searchDto.query}%`),
-				]),
 			},
 			relations: returnRelationsUser,
 		})
@@ -100,42 +100,61 @@ export class SearchService {
 					? MoreThan(3600)
 					: MoreThanOrEqual(0),
 		}
-
 		const videos = await this.videoRepository.find({
 			where: [
 				{
-					title: In([
-						ILike(`%${ruTranslit}%`),
-						ILike(`%${enTranslit}%`),
-						ILike(`%${searchDto.query}%`),
-					]),
 					...sort,
+					title: ILike(`%${ruTranslit}%`),
 				},
 				{
-					description: In([
-						ILike(`%${ruTranslit}%`),
-						ILike(`%${enTranslit}%`),
-						ILike(`%${searchDto.query}%`),
-					]),
 					...sort,
+					title: ILike(`%${enTranslit}%`),
 				},
 				{
+					...sort,
+					title: ILike(`%${searchDto.query}%`),
+				},
+				{
+					...sort,
+					description: ILike(`%${ruTranslit}%`),
+				},
+				{
+					...sort,
+					description: ILike(`%${enTranslit}%`),
+				},
+				{
+					...sort,
+					description: ILike(`%${searchDto.query}%`),
+				},
+				{
+					...sort,
+					tags: ILike(`%${ruTranslit}%`),
+				},
+				{
+					...sort,
+					tags: ILike(`%${enTranslit}%`),
+				},
+				{
+					...sort,
+					tags: ILike(`%${searchDto.query}%`),
+				},
+				{
+					...sort,
 					author: {
-						name: In([
-							ILike(`%${ruTranslit}%`),
-							ILike(`%${enTranslit}%`),
-							ILike(`%${searchDto.query}%`),
-						]),
+						name: ILike(`%${ruTranslit}%`),
 					},
-					...sort,
 				},
 				{
-					tags: In([
-						ILike(`%${ruTranslit}%`),
-						ILike(`%${enTranslit}%`),
-						ILike(`%${searchDto.query}%`),
-					]),
 					...sort,
+					author: {
+						name: ILike(`%${enTranslit}%`),
+					},
+				},
+				{
+					...sort,
+					author: {
+						name: ILike(`%${searchDto.query}%`),
+					},
 				},
 			],
 			order,
