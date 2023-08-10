@@ -14,6 +14,8 @@ import { UsersService } from './users.service'
 import { Auth } from 'src/auth/decorators/auth.decorator'
 import { User } from './decorators/user.decorator'
 import { UpdateProfileDto } from './dto/update-profile.dto'
+import { UpdateAvatarPathDto } from './dto/update-avatar-path.dto'
+import { UpdateBannerPathDto } from './dto/update-banner-path.dto'
 
 @Controller('users')
 export class UsersController {
@@ -25,6 +27,12 @@ export class UsersController {
 		return this.usersService.getProfile(id)
 	}
 
+	@Get('profile/statistics')
+	@Auth()
+	async getStatistics(@User('id') id: string) {
+		return this.usersService.getStatistics(id)
+	}
+
 	@Auth()
 	@HttpCode(200)
 	@UsePipes(new ValidationPipe())
@@ -34,6 +42,34 @@ export class UsersController {
 		@Body() updateProfileDto: UpdateProfileDto
 	) {
 		return this.usersService.updateProfile(updateProfileDto, id)
+	}
+
+	@Auth()
+	@HttpCode(200)
+	@UsePipes(new ValidationPipe())
+	@Patch('profile/banner')
+	async updateBannerPath(
+		@User('id') id: string,
+		@Body() updateBannerPathDto: UpdateBannerPathDto
+	) {
+		return this.usersService.updateBannerPath(
+			updateBannerPathDto.bannerPath,
+			id
+		)
+	}
+
+	@Auth()
+	@HttpCode(200)
+	@UsePipes(new ValidationPipe())
+	@Patch('profile/avatar')
+	async updateAvatarPath(
+		@User('id') id: string,
+		@Body() updateAvatarPathDto: UpdateAvatarPathDto
+	) {
+		return this.usersService.updateAvatarPath(
+			updateAvatarPathDto.avatarPath,
+			id
+		)
 	}
 
 	@Auth()

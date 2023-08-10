@@ -8,6 +8,7 @@ import {
 	Patch,
 	Post,
 	Put,
+	Req,
 	UsePipes,
 	ValidationPipe,
 } from '@nestjs/common'
@@ -16,6 +17,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator'
 import { CreateVideoDto } from './dto/create-video.dto'
 import { User } from 'src/users/decorators/user.decorator'
 import { UpdateVideoDto } from './dto/update-video.dto'
+import { Request } from 'express'
 
 @Controller('videos')
 export class VideosController {
@@ -51,12 +53,14 @@ export class VideosController {
 	}
 
 	@Patch('toggle-like/:id')
+	@HttpCode(200)
 	@Auth()
 	async toggleLikeVideo(@Param('id') id: string, @User('id') userId: string) {
 		return await this.videosService.toggleLikeVideo(id, userId)
 	}
 
 	@Patch('toggle-dislike/:id')
+	@HttpCode(200)
 	@Auth()
 	async toggleDisLikeVideo(
 		@Param('id') id: string,
@@ -66,6 +70,7 @@ export class VideosController {
 	}
 
 	@Patch('view-video/:id')
+	@HttpCode(200)
 	async viewVideo(@Param('id') id: string) {
 		return await this.videosService.viewVideo(id)
 	}
@@ -81,14 +86,19 @@ export class VideosController {
 		return await this.videosService.getTopVideos()
 	}
 
+	@Get('full-top')
+	async getFullTopVideos() {
+		return await this.videosService.getFullTopVideos()
+	}
+
 	@Get('newest')
 	async getNewestVideos() {
 		return await this.videosService.getNewestVideos()
 	}
 
-	@Get('category/:id')
-	async getVideosByCategory(@Param('id') id: string) {
-		return await this.videosService.getVideosByCategory(id)
+	@Get('category/:slug')
+	async getVideosByCategorySlug(@Param('slug') slug: string) {
+		return await this.videosService.getVideosByCategorySlug(slug)
 	}
 
 	@Get('recommendation')
@@ -98,8 +108,8 @@ export class VideosController {
 	}
 
 	@Get('category-videos')
-	async getCategoryAndVideo() {
-		return await this.videosService.getCategoryAndVideo()
+	async getCategoryAndVideos() {
+		return await this.videosService.getCategoryAndVideos()
 	}
 
 	@Get('profile')
@@ -108,13 +118,27 @@ export class VideosController {
 		return await this.videosService.getVideosByProfile(id)
 	}
 
-	@Get('user/:id')
-	async getVideosByUser(@Param('id') id: string) {
-		return await this.videosService.getVideosByUser(id)
+	@Get('similar/:id')
+	async getSimilarVideos(@Param('id') id: string) {
+		return await this.videosService.getSimilarVideos(id)
 	}
 
-	@Get(':id')
-	async getVideoBySlug(@Param('id') id: string) {
-		return await this.videosService.getVideoBySlug(id)
+	@Get('user/:id')
+	async getVideosByUserId(@Param('id') id: string) {
+		return await this.videosService.getVideosByUserId(id)
+	}
+
+	@Get('profile/likes')
+	async getLikeVideos(@User('id') id: string) {
+		return await this.videosService.getLikeVideos(id)
+	}
+
+	@Get(':slug')
+	async getVideoBySlug(@Param('slug') slug: string, @Req() req: Request) {
+		return await this.videosService.getVideoBySlug(
+			slug,
+			req.headers.authorization,
+			req.cookies.refreshToken
+		)
 	}
 }

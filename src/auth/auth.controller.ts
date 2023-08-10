@@ -19,6 +19,7 @@ import { ResetPasswordDto } from './dto/reset-password.dto'
 import { TokenPayload } from 'google-auth-library'
 import { FacebookDto } from './dto/facebook.dto'
 import axios from 'axios'
+import { GoogleDto } from './dto/google.dto'
 
 const cookieData = {
 	path: '/api',
@@ -69,7 +70,7 @@ export class AuthController {
 		response.clearCookie('refreshToken', cookieData)
 
 		return {
-			message: 'You successfully logged out',
+			message: 'Вы успешно вышли',
 		}
 	}
 
@@ -106,15 +107,17 @@ export class AuthController {
 	}
 
 	@Post('google')
+	@HttpCode(200)
+	@UsePipes(new ValidationPipe())
 	async authByGoogle(
-		@Body('token') token: string,
+		@Body() googleDto: GoogleDto,
 		@Res({ passthrough: true }) response: Response
 	) {
 		let data = {}
 
 		await axios
 			.get(
-				`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${token}`
+				`https://www.googleapis.com/oauth2/v3/userinfo?access_token=${googleDto.token}`
 			)
 			.then(response => (data = response.data))
 
@@ -129,6 +132,8 @@ export class AuthController {
 	}
 
 	@Post('facebook')
+	@HttpCode(200)
+	@UsePipes(new ValidationPipe())
 	async authByFacebook(
 		@Body() facebookDto: FacebookDto,
 		@Res({ passthrough: true }) response: Response

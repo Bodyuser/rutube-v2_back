@@ -26,11 +26,13 @@ export class SocketService {
 
 	async join(userId: string, socketId: string, disconnect: any) {
 		const user = await this.userRepository.findOne({ where: { id: userId } })
+		console.log(user)
+
 		if (!user) return disconnect()
 
 		const data = {
 			socketId,
-			id: userId,
+			id: user?.id,
 		}
 
 		this.onlineUsers.push(data)
@@ -48,9 +50,6 @@ export class SocketService {
 		})
 
 		const lastIp = await this.ipRepository.findOne({
-			order: {
-				createdAt: 'DESC',
-			},
 			where: {
 				user: {
 					id: userId,
@@ -89,6 +88,9 @@ export class SocketService {
 			}
 		}
 
+		console.log(this.onlineUsers)
+		
+
 		return {
 			onlineUsers: this.onlineUsers,
 		}
@@ -97,6 +99,8 @@ export class SocketService {
 	async leave(socketId: string) {
 		const data = this.onlineUsers.find(user => user.socketId === socketId)
 		if (!data?.id) return
+
+		this.onlineUsers = this.onlineUsers.filter(user => user.socketId !== socketId)
 
 		const user = await this.userRepository.findOne({
 			where: {
@@ -118,5 +122,9 @@ export class SocketService {
 		return {
 			onlineUsers: this.onlineUsers,
 		}
+	}
+
+	getOnlineUsers() {
+		return this.onlineUsers
 	}
 }

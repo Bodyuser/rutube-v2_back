@@ -51,12 +51,6 @@ export class UpdateProfileDto {
 	@IsOptional()
 	currentPassword: string
 
-	@IsString({ message: 'Аватарка должна быть строкой' })
-	avatarPath: string
-
-	@IsString({ message: 'Баннер должен быть строкой' })
-	bannerPath: string
-
 	@IsString({ message: 'О себе должен быть строкой' })
 	@IsOptional()
 	about: string

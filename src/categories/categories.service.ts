@@ -9,6 +9,7 @@ import { CategoryEntity } from './entities/category.entity'
 import { Repository } from 'typeorm'
 import { UpdateCategoryDto } from './dto/update-category.dto'
 import { returnRelationCategory } from './returnRelationCategory'
+import { validate } from 'uuid'
 
 @Injectable()
 export class CategoriesService {
@@ -33,9 +34,11 @@ export class CategoriesService {
 	}
 
 	async updateCategory(updateCategoryDto: UpdateCategoryDto, id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
 		const category = await this.categoryRepository.findOne({
 			where: { id },
-			relations: returnRelationCategory,
 		})
 		if (!category) throw new NotFoundException('Категория не найдена')
 
@@ -59,6 +62,9 @@ export class CategoriesService {
 	}
 
 	async deleteCategory(id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
 		const category = await this.categoryRepository.findOne({
 			where: { id },
 		})
@@ -72,10 +78,10 @@ export class CategoriesService {
 	}
 
 	async checkExistingSlug(slug: string) {
-		const video = await this.categoryRepository.findOne({
+		const category = await this.categoryRepository.findOne({
 			where: { slug },
 		})
-		if (video) {
+		if (category) {
 			return {
 				message: 'Слаг занят',
 				access: false,
@@ -89,22 +95,21 @@ export class CategoriesService {
 	}
 
 	async getCategories() {
-		const categories = await this.categoryRepository.find({
-			relations: returnRelationCategory,
-		})
+		const categories = await this.categoryRepository.find()
 
 		return {
 			categories,
 		}
 	}
 
-	async getCategory(slug: string) {
+	async getCategoryBySlug(slug: string) {
 		const category = await this.categoryRepository.findOne({
-			relations: returnRelationCategory,
 			where: {
 				slug,
 			},
 		})
+
+		if (!category) throw new NotFoundException('Категория не найдена')
 
 		return {
 			category,

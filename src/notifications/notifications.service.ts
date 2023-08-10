@@ -99,7 +99,7 @@ export class NotificationsService {
 					id: commentId,
 				},
 			})
-		}
+		}		
 
 		const notification = this.notificationRepository.create({
 			text,

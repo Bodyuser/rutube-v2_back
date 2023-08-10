@@ -57,7 +57,7 @@ export class CategoriesController {
 	}
 
 	@Get(':slug')
-	async getCategory(@Param('slug') slug: string) {
-		return await this.categoriesService.getCategory(slug)
+	async getCategoryBySlug(@Param('slug') slug: string) {
+		return await this.categoriesService.getCategoryBySlug(slug)
 	}
 }

@@ -6,6 +6,9 @@ import { NotificationEntity } from './entities/notification.entity'
 import { UserEntity } from 'src/users/entities/user.entity'
 import { VideoEntity } from 'src/videos/entities/video.entity'
 import { CommentEntity } from 'src/comments/entities/comment.entity'
+import { JwtModule } from '@nestjs/jwt'
+import { ConfigModule, ConfigService } from '@nestjs/config'
+import { connectJWT } from 'src/configs/connectJWT.config'
 
 @Module({
 	controllers: [NotificationsController],
@@ -17,6 +20,11 @@ import { CommentEntity } from 'src/comments/entities/comment.entity'
 			VideoEntity,
 			CommentEntity,
 		]),
+		JwtModule.registerAsync({
+			imports: [ConfigModule],
+			inject: [ConfigService],
+			useFactory: connectJWT,
+		}),
 	],
 	exports: [NotificationsService],
 })

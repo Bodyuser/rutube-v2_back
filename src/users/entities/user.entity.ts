@@ -61,7 +61,7 @@ export class UserEntity extends BaseEntity {
 	@Column({ name: 'banner_path', default: '/uploads/banner.png' })
 	bannerPath: string
 
-	@Column({ default: '' })
+	@Column({ nullable: true })
 	about: string
 
 	@Generated('uuid')
@@ -78,13 +78,18 @@ export class UserEntity extends BaseEntity {
 	@Column({ default: generateCode(6) })
 	code: number
 
+	@Column({ default: false, name: "is_verified" })
+	isVerified: boolean
+
 	@OneToMany(() => IpEntity, ip => ip.user)
 	ips: IpEntity[]
 
 	@OneToMany(() => VideoEntity, video => video.author)
 	videos: VideoEntity[]
 
-	@ManyToMany(() => VideoEntity, video => video.likeUsers)
+	@ManyToMany(() => VideoEntity, video => video.likeUsers, {
+		onDelete: "CASCADE"
+	})
 	@JoinTable({
 		name: 'likeVideo_likeUser',
 		joinColumn: {
@@ -98,7 +103,9 @@ export class UserEntity extends BaseEntity {
 	})
 	likeVideos: VideoEntity[]
 
-	@ManyToMany(() => VideoEntity, video => video.disLikeUsers)
+	@ManyToMany(() => VideoEntity, video => video.disLikeUsers, {
+		onDelete: "CASCADE"
+	})
 	@JoinTable({
 		name: 'disLikeVideo_disLikeUser',
 		joinColumn: {
@@ -115,7 +122,9 @@ export class UserEntity extends BaseEntity {
 	@OneToMany(() => CommentEntity, comment => comment.author)
 	comments: CommentEntity[]
 
-	@ManyToMany(() => CommentEntity, comment => comment.likeUsers)
+	@ManyToMany(() => CommentEntity, comment => comment.likeUsers, {
+		onDelete: "CASCADE"
+	})
 	@JoinTable({
 		name: 'likeComment_likeUser',
 		joinColumn: {
@@ -129,7 +138,9 @@ export class UserEntity extends BaseEntity {
 	})
 	likeComments: CommentEntity[]
 
-	@ManyToMany(() => CommentEntity, comment => comment.disLikeUsers)
+	@ManyToMany(() => CommentEntity, comment => comment.disLikeUsers, {
+		onDelete: "CASCADE"
+	})
 	@JoinTable({
 		name: 'disLikeComment_disLikeUser',
 		joinColumn: {
@@ -146,7 +157,9 @@ export class UserEntity extends BaseEntity {
 	@OneToMany(() => NotificationEntity, notification => notification.user)
 	notifications: NotificationEntity[]
 
-	@ManyToMany(() => UserEntity, user => user.followers)
+	@ManyToMany(() => UserEntity, user => user.followers, {
+		onDelete: 'CASCADE',
+	})
 	@JoinTable({
 		name: 'following_followers',
 		joinColumn: {
@@ -160,7 +173,9 @@ export class UserEntity extends BaseEntity {
 	})
 	following: UserEntity[] // На кого ты подписан
 
-	@ManyToMany(() => UserEntity, user => user.following)
+	@ManyToMany(() => UserEntity, user => user.following, {
+		onDelete: 'CASCADE',
+	})
 	followers: UserEntity[] // те кто подписан на тебя
 
 	@BeforeInsert()

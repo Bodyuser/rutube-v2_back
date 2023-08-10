@@ -8,13 +8,12 @@ import { connectJWT } from 'src/configs/connectJWT.config'
 import { UserEntity } from 'src/users/entities/user.entity'
 import { TypeOrmModule } from '@nestjs/typeorm'
 import { SendMailModule } from 'src/send-mail/send-mail.module'
-import { IpEntity } from 'src/ip.entity'
 
 @Module({
 	controllers: [AuthController],
 	providers: [AuthService, JwtStrategy],
 	imports: [
-		TypeOrmModule.forFeature([UserEntity, IpEntity]),
+		TypeOrmModule.forFeature([UserEntity]),
 		ConfigModule,
 		JwtModule.registerAsync({
 			imports: [ConfigModule],

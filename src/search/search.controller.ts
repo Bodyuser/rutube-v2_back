@@ -1,6 +1,7 @@
-import { Controller, Get, Query } from '@nestjs/common'
+import { Controller, Get, Query, Req } from '@nestjs/common'
 import { SearchService } from './search.service'
 import { SearchDto } from './dto/search.dto'
+import { Request, Response } from 'express'
 
 @Controller('search')
 export class SearchController {
@@ -12,7 +13,11 @@ export class SearchController {
 	}
 
 	@Get('result')
-	async getSearchResult(@Query() searchDto: SearchDto) {
-		return await this.searchService.getSearchResult(searchDto)
+	async getSearchResult(@Query() searchDto: SearchDto, @Req() req: Request) {
+		return await this.searchService.getSearchResult(
+			searchDto,
+			req.headers.authorization,
+			req.cookies.refreshToken
+		)
 	}
 }

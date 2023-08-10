@@ -33,6 +33,9 @@ export class VideoEntity extends BaseEntity {
 	@Column('simple-array')
 	tags: string[]
 
+	@Column({ name: 'is_private' })
+	isPrivate: boolean
+
 	@ManyToOne(() => CategoryEntity, category => category.videos)
 	category: CategoryEntity
 
@@ -42,9 +45,13 @@ export class VideoEntity extends BaseEntity {
 	@ManyToOne(() => UserEntity, user => user.videos, { onDelete: 'CASCADE' })
 	author: UserEntity
 
-	@ManyToMany(() => UserEntity, user => user.likeVideos)
+	@ManyToMany(() => UserEntity, user => user.likeVideos, {
+		onDelete: 'CASCADE',
+	})
 	likeUsers: UserEntity[]
 
-	@ManyToMany(() => UserEntity, user => user.disLikeVideos)
+	@ManyToMany(() => UserEntity, user => user.disLikeVideos, {
+		onDelete: 'CASCADE',
+	})
 	disLikeUsers: UserEntity[]
 }

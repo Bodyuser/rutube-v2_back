@@ -17,13 +17,16 @@ import { DateEnum, DurationEnum, OrderEnum, SearchDto } from './dto/search.dto'
 import { returnRelationsUser } from 'src/users/returnRelationsUser'
 import { returnRelationVideo } from 'src/videos/returnRelationVideo'
 import { translit } from 'src/utils/translitText'
+import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
 export class SearchService {
 	constructor(
 		@InjectRepository(VideoEntity)
 		private videoRepository: Repository<VideoEntity>,
-		@InjectRepository(UserEntity) private userRepository: Repository<UserEntity>
+		@InjectRepository(UserEntity)
+		private userRepository: Repository<UserEntity>,
+		private jwtService: JwtService
 	) {}
 
 	async getSearchList() {
@@ -58,7 +61,11 @@ export class SearchService {
 		return list.sort((a, b) => a.localeCompare(b))
 	}
 
-	async getSearchResult(searchDto: SearchDto) {
+	async getSearchResult(
+		searchDto: SearchDto,
+		authToken: string,
+		refreshToken?: string
+	) {
 		const ruTranslit = translit(searchDto.query, 'ru')
 		const enTranslit = translit(searchDto.query, 'en')
 
@@ -70,7 +77,9 @@ export class SearchService {
 				),
 				videos: MoreThanOrEqual(1),
 			},
-			relations: returnRelationsUser,
+			relations: {
+				followers: true,
+			},
 		})
 		let order = {}
 
@@ -161,12 +170,55 @@ export class SearchService {
 			relations: returnRelationVideo,
 		})
 
-		return {
-			users: users.map(user => ({
+		let accessPayload = null
+		let refreshPayload = null
+		let resultUsers = []
+
+		if (authToken && authToken.startsWith('Bearer')) {
+			const accessToken = authToken.split(' ')[1]
+
+			accessPayload = await this.jwtService.verifyAsync(accessToken)
+		}
+
+		if (refreshToken) {
+			refreshPayload = await this.jwtService.verifyAsync(refreshToken)
+		}
+
+		if (
+			accessPayload?.userId &&
+			refreshPayload?.userId &&
+			accessPayload?.userId === refreshPayload?.userId
+		) {
+			const profile = await this.userRepository.findOne({
+				where: {
+					id: accessPayload?.userId,
+				},
+			})
+			if (profile) {
+				resultUsers = users.map(user => ({
+					...user.returnUser(),
+					countFollowers: user?.followers?.length,
+					isSubscribe: user?.followers.some(u => u.id === profile.id),
+				}))
+			} else {
+				resultUsers = users.map(user => ({
+					...user.returnUser(),
+					countFollowers: user?.followers?.length,
+				}))
+			}
+		} else {
+			resultUsers = users.map(user => ({
 				...user.returnUser(),
-				followers: user.followers.map(user => user.returnUser()),
-				following: user.following.map(user => user.returnUser()),
-			})),
+				countFollowers: user?.followers?.length,
+			}))
+		}
+
+		resultUsers.forEach(u => {
+			delete u?.followers
+		})
+
+		return {
+			users: resultUsers,
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),

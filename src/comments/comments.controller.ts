@@ -5,9 +5,11 @@ import {
 	Get,
 	HttpCode,
 	Param,
+	Patch,
 	Post,
 	Put,
 	UsePipes,
+	Req,
 	ValidationPipe,
 } from '@nestjs/common'
 import { CommentsService } from './comments.service'
@@ -15,6 +17,7 @@ import { Auth } from 'src/auth/decorators/auth.decorator'
 import { CreateCommentDto } from './dto/create-comment.dto'
 import { User } from 'src/users/decorators/user.decorator'
 import { UpdateCommentDto } from './dto/update-comment.dto'
+import { Request } from 'express'
 
 @Controller('comments')
 export class CommentsController {
@@ -58,8 +61,39 @@ export class CommentsController {
 		return await this.commentsService.deleteComment(id, userId)
 	}
 
+	@Patch('toggle-like/:id')
+	@Auth()
+	async toggleLikeComment(@Param('id') id: string, @User('id') userId: string) {
+		return await this.commentsService.toggleLikeComment(id, userId)
+	}
+
+	@Patch('toggle-dislike/:id')
+	@Auth()
+	async toggleDisLikeComment(
+		@Param('id') id: string,
+		@User('id') userId: string
+	) {
+		return await this.commentsService.toggleDisLikeComment(id, userId)
+	}
+
+	@Get('reply-comments/:id')
+	async getReplyCommentsByCommentId(
+		@Param('id') id: string,
+		@Req() req: Request
+	) {
+		return await this.commentsService.getReplyCommentsByCommentId(
+			id,
+			req.headers.authorization,
+			req.cookies.refreshToken
+		)
+	}
+
 	@Get(':id')
-	async getCommentsByVideo(@Param('id') id: string) {
-		return await this.commentsService.getCommentsByVideo(id)
+	async getCommentsByVideo(@Param('id') id: string, @Req() req: Request) {
+		return await this.commentsService.getCommentsByVideoId(
+			id,
+			req.headers.authorization,
+			req.cookies.refreshToken
+		)
 	}
 }

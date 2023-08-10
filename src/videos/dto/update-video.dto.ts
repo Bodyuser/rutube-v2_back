@@ -1,4 +1,10 @@
-import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator'
+import {
+	IsArray,
+	IsBoolean,
+	IsNumber,
+	IsOptional,
+	IsString,
+} from 'class-validator'
 
 export class UpdateVideoDto {
 	@IsString({ message: 'Название должно быть строкой' })
@@ -27,6 +33,9 @@ export class UpdateVideoDto {
 
 	@IsNumber({}, { message: 'Продолжительность должна быть числом' })
 	duration: number
+
+	@IsBoolean({ message: 'Приватность должна быть логическим типом' })
+	isPrivate: boolean
 
 	@IsArray({ message: 'Тэги должны быть массивом' })
 	@IsString({ each: true, message: 'Тэги должны быть строками' })

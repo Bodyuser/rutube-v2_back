@@ -5,13 +5,15 @@ import {
 } from '@nestjs/common'
 import { VideoEntity } from './entities/video.entity'
 import { InjectRepository } from '@nestjs/typeorm'
-import { In, MoreThan, MoreThanOrEqual, Repository } from 'typeorm'
+import { In, MoreThan, MoreThanOrEqual, Not, Repository } from 'typeorm'
 import { CreateVideoDto } from './dto/create-video.dto'
 import { CategoryEntity } from 'src/categories/entities/category.entity'
 import { UserEntity } from 'src/users/entities/user.entity'
 import { UpdateVideoDto } from './dto/update-video.dto'
 import { returnRelationVideo } from './returnRelationVideo'
 import { NotificationsService } from 'src/notifications/notifications.service'
+import { validate } from 'uuid'
+import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
 export class VideosService {
@@ -22,7 +24,8 @@ export class VideosService {
 		private categoryRepository: Repository<CategoryEntity>,
 		@InjectRepository(UserEntity)
 		private userRepository: Repository<UserEntity>,
-		private notificationsService: NotificationsService
+		private notificationsService: NotificationsService,
+		private jwtService: JwtService
 	) {}
 
 	async createVideo(createVideoDto: CreateVideoDto, id: string) {
@@ -71,11 +74,10 @@ export class VideosService {
 			})
 		)
 
+		const { author: a, category: c, ...rest } = video
+
 		return {
-			video: {
-				...video,
-				author: author.returnUser(),
-			},
+			video: rest,
 		}
 	}
 
@@ -84,9 +86,17 @@ export class VideosService {
 		id: string,
 		userId: string
 	) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
+		const isValidUserId = validate(userId)
+		if (!isValidUserId) throw new BadRequestException('Неверный формат id')
+
 		const video = await this.videoRepository.findOne({
 			where: { id, author: { id: userId } },
-			relations: returnRelationVideo,
+			relations: {
+				category: true,
+			},
 		})
 		if (!video) throw new NotFoundException('Видео не найдено')
 
@@ -114,20 +124,24 @@ export class VideosService {
 		video.bannerPath = updateVideoDto.bannerPath
 		video.minAgeRestrictions = updateVideoDto.minAgeRestrictions
 		video.duration = updateVideoDto.duration
+		video.isPrivate = updateVideoDto.isPrivate
 
 		await this.videoRepository.save(video)
 
+		const { category: c, ...rest } = video
+
 		return {
-			video: {
-				...video,
-				author: video.author.returnUser(),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-			},
+			video: rest,
 		}
 	}
 
 	async deleteVideo(id: string, userId: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
+		const isValidUserId = validate(userId)
+		if (!isValidUserId) throw new BadRequestException('Неверный формат id')
+
 		const video = await this.videoRepository.findOne({
 			where: { id, author: { id: userId } },
 		})
@@ -141,9 +155,18 @@ export class VideosService {
 	}
 
 	async toggleLikeVideo(id: string, userId: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
+		const isValidUserId = validate(userId)
+		if (!isValidUserId) throw new BadRequestException('Неверный формат id')
+
 		const video = await this.videoRepository.findOne({
 			where: { id },
-			relations: returnRelationVideo,
+			relations: {
+				likeUsers: true,
+				disLikeUsers: true,
+			},
 		})
 		if (!video) throw new NotFoundException('Видео не найдено')
 
@@ -152,32 +175,39 @@ export class VideosService {
 
 		if (video.likeUsers.some(user => user.id === userId)) {
 			video.likeUsers = video.likeUsers.filter(user => user.id !== userId)
+			await this.videoRepository.save(video)
+
+			return {
+				message: 'Вы убрали лайк',
+			}
 		} else {
 			video.likeUsers = [...video.likeUsers, user]
-
 			if (video.disLikeUsers.some(user => user.id === userId)) {
 				video.disLikeUsers = video.disLikeUsers.filter(
 					user => user.id !== userId
 				)
 			}
-		}
+			await this.videoRepository.save(video)
 
-		await this.videoRepository.save(video)
-
-		return {
-			video: {
-				...video,
-				author: video.author.returnUser(),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-			},
+			return {
+				message: 'Вы поставили лайк',
+			}
 		}
 	}
 
 	async toggleDisLikeVideo(id: string, userId: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
+		const isValidUserId = validate(userId)
+		if (!isValidUserId) throw new BadRequestException('Неверный формат id')
+
 		const video = await this.videoRepository.findOne({
 			where: { id },
-			relations: returnRelationVideo,
+			relations: {
+				likeUsers: true,
+				disLikeUsers: true,
+			},
 		})
 		if (!video) throw new NotFoundException('Видео не найдено')
 
@@ -186,27 +216,30 @@ export class VideosService {
 
 		if (video.disLikeUsers.some(user => user.id === userId)) {
 			video.disLikeUsers = video.disLikeUsers.filter(user => user.id !== userId)
+			await this.videoRepository.save(video)
+
+			return {
+				message: 'Вы убрали дизлайк',
+			}
 		} else {
 			video.disLikeUsers = [...video.disLikeUsers, user]
 
 			if (video.likeUsers.some(user => user.id === userId)) {
 				video.likeUsers = video.likeUsers.filter(user => user.id !== userId)
 			}
-		}
 
-		await this.videoRepository.save(video)
+			await this.videoRepository.save(video)
 
-		return {
-			video: {
-				...video,
-				author: video.author.returnUser(),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-			},
+			return {
+				message: 'Вы поставили дизлайк',
+			}
 		}
 	}
 
 	async viewVideo(id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
 		const video = await this.videoRepository.findOne({
 			where: { id },
 			relations: returnRelationVideo,
@@ -218,12 +251,7 @@ export class VideosService {
 		await this.videoRepository.save(video)
 
 		return {
-			video: {
-				...video,
-				author: video.author.returnUser(),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-			},
+			countViews: video.countViews,
 		}
 	}
 
@@ -250,7 +278,9 @@ export class VideosService {
 				createdAt: MoreThan(new Date(Date.now() - 604800000)),
 				countViews: MoreThanOrEqual(1),
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 		})
 
 		videos.sort((a, b) => b.countViews - a.countViews).slice(0, 5)
@@ -259,8 +289,27 @@ export class VideosService {
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
+			})),
+		}
+	}
+
+	async getFullTopVideos() {
+		const videos = await this.videoRepository.find({
+			where: {
+				createdAt: MoreThan(new Date(Date.now() - 2419200000)),
+				countViews: MoreThanOrEqual(1),
+			},
+			relations: {
+				author: true,
+			},
+		})
+
+		videos.sort((a, b) => b.countViews - a.countViews)
+
+		return {
+			videos: videos.map(video => ({
+				...video,
+				author: video.author.returnUser(),
 			})),
 		}
 	}
@@ -273,20 +322,23 @@ export class VideosService {
 			where: {
 				createdAt: MoreThan(new Date(Date.now() - 604800000)),
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 		})
 
 		return {
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
 			})),
 		}
 	}
 
 	async getRecommendationVideos(userId: string) {
+		const isValidUserId = validate(userId)
+		if (!isValidUserId) throw new BadRequestException('Неверный формат id')
+
 		const following = await this.userRepository.find({
 			where: {
 				followers: {
@@ -307,7 +359,9 @@ export class VideosService {
 				},
 				createdAt: MoreThan(new Date(Date.now() - 604800000 * 4)),
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 			order: {
 				countViews: 'DESC',
 				createdAt: 'DESC',
@@ -319,53 +373,109 @@ export class VideosService {
 				videos: videos.map(video => ({
 					...video,
 					author: video.author.returnUser(),
-					disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-					likeUsers: video.likeUsers.map(user => user.returnUser()),
 				})),
 			}
 		}
 		return await this.getTopVideos()
 	}
 
-	async getVideosByCategory(id: string) {
+	async getVideosByCategorySlug(slug: string) {
 		const videos = await this.videoRepository.find({
 			where: {
 				category: {
-					id,
+					slug,
 				},
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 		})
 
 		return {
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
 			})),
 		}
 	}
 
-	async getVideoBySlug(slug: string) {
+	async getVideoBySlug(
+		slug: string,
+		authHeader?: string,
+		refreshToken?: string
+	) {
 		const video = await this.videoRepository.findOne({
 			where: {
 				slug,
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+				likeUsers: true,
+				disLikeUsers: true,
+				category: true,
+			},
 		})
 
-		return {
-			video: {
+		if (!video) throw new NotFoundException('Видео не найдено')
+
+		let accessData: any = null
+		let refreshData: any = null
+
+		if (authHeader && refreshToken) {
+			if (authHeader.startsWith('Bearer')) {
+				accessData = await this.jwtService.verifyAsync(authHeader.split(' ')[1])
+			}
+			refreshData = await this.jwtService.verifyAsync(refreshToken)
+		}
+
+		let resultVideo: any = null
+
+		if (
+			accessData &&
+			refreshData &&
+			accessData?.userId &&
+			refreshData?.userId &&
+			accessData?.userId === refreshData?.userId
+		) {
+			const user = await this.userRepository.findOne({
+				where: { id: accessData?.userId },
+			})
+
+			if (!user) {
+				resultVideo = {
+					...video,
+					author: video.author.returnUser(),
+					countLike: video.likeUsers.length,
+					countDisLike: video.disLikeUsers.length,
+				}
+			} else {
+				resultVideo = {
+					...video,
+					author: video.author.returnUser(),
+					isLike: video.likeUsers.some(u => u.id === user.id),
+					isDisLike: video.disLikeUsers.some(u => u.id === user.id),
+					countLike: video.likeUsers.length,
+					countDisLike: video.disLikeUsers.length,
+				}
+			}
+		} else {
+			resultVideo = {
 				...video,
-				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
-			},
+				author: video?.author.returnUser(),
+				countLike: video.likeUsers.length,
+				countDisLike: video.disLikeUsers.length,
+			}
+		}
+
+		delete resultVideo.likeUsers
+		delete resultVideo.disLikeUsers
+
+		return {
+			video: resultVideo,
 		}
 	}
 
-	async getCategoryAndVideo() {
+	async getCategoryAndVideos() {
 		const categories = await this.categoryRepository.find()
 
 		return await Promise.all(
@@ -376,7 +486,9 @@ export class VideosService {
 							id: category.id,
 						},
 					},
-					relations: returnRelationVideo,
+					relations: {
+						author: true,
+					},
 				})
 
 				return {
@@ -384,8 +496,6 @@ export class VideosService {
 					videos: videos.map(video => ({
 						...video,
 						author: video.author.returnUser(),
-						disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-						likeUsers: video.likeUsers.map(user => user.returnUser()),
 					})),
 				}
 			})
@@ -393,13 +503,18 @@ export class VideosService {
 	}
 
 	async getVideosByProfile(id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
 		const videos = await this.videoRepository.find({
 			where: {
 				author: {
 					id,
 				},
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 			order: {
 				createdAt: 'DESC',
 			},
@@ -409,20 +524,23 @@ export class VideosService {
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
 			})),
 		}
 	}
 
-	async getVideosByUser(id: string) {
+	async getVideosByUserId(id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
 		const videos = await this.videoRepository.find({
 			where: {
 				author: {
 					id,
 				},
 			},
-			relations: returnRelationVideo,
+			relations: {
+				author: true,
+			},
 			order: {
 				createdAt: 'DESC',
 			},
@@ -432,8 +550,59 @@ export class VideosService {
 			videos: videos.map(video => ({
 				...video,
 				author: video.author.returnUser(),
-				disLikeUsers: video.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: video.likeUsers.map(user => user.returnUser()),
+			})),
+		}
+	}
+
+	async getSimilarVideos(id: string) {
+		const isValid = validate(id)
+		if (!isValid) throw new BadRequestException('Неверный формат id')
+
+		const category = await this.categoryRepository.findOne({
+			where: {
+				videos: {
+					id,
+				},
+			},
+			relations: { videos: true },
+		})
+
+		const videos = await this.videoRepository.find({
+			where: {
+				category: {
+					id: category.id,
+				},
+				id: Not(id),
+			},
+			relations: {
+				author: true,
+			},
+		})
+
+		return {
+			videos: videos.map(video => ({
+				...video,
+				author: video.author.returnUser(),
+			})),
+		}
+	}
+
+	async getLikeVideos(id: string) {
+		const videos = await this.videoRepository.find({
+			where: {
+				likeUsers: {
+					id,
+				},
+			},
+			relations: {
+				author: true,
+			},
+		})
+
+		return {
+			videos: videos.map(video => ({
+				...video,
+				author: video.author.returnUser(),
 			})),
 		}
 	}

@@ -8,6 +8,7 @@ import { VideoEntity } from 'src/videos/entities/video.entity'
 import { UpdateCommentDto } from './dto/update-comment.dto'
 import { returnRelationComment } from './returnRelationComment'
 import { NotificationsService } from 'src/notifications/notifications.service'
+import { JwtService } from '@nestjs/jwt'
 
 @Injectable()
 export class CommentsService {
@@ -18,7 +19,8 @@ export class CommentsService {
 		private userRepository: Repository<UserEntity>,
 		@InjectRepository(VideoEntity)
 		private videoRepository: Repository<VideoEntity>,
-		private notificationsService: NotificationsService
+		private notificationsService: NotificationsService,
+		private jwtService: JwtService
 	) {}
 
 	async createComment(
@@ -103,7 +105,6 @@ export class CommentsService {
 				id,
 				author: { id: userId },
 			},
-			relations: returnRelationComment,
 		})
 
 		if (!comment) throw new NotFoundException('Комментарий не найден')
@@ -113,12 +114,7 @@ export class CommentsService {
 		await this.commentRepository.save(comment)
 
 		return {
-			comment: {
-				...comment,
-				author: comment.author.returnProfile(),
-				disLikeUsers: comment.disLikeUsers.map(user => user.returnUser()),
-				likeUsers: comment.likeUsers.map(user => user.returnUser()),
-			},
+			comment,
 		}
 	}
 
@@ -128,7 +124,9 @@ export class CommentsService {
 				id,
 				author: { id: userId },
 			},
-			relations: returnRelationComment,
+			relations: {
+				author: true,
+			},
 		})
 
 		if (!comment) throw new NotFoundException('Комментарий не найден')
@@ -140,7 +138,11 @@ export class CommentsService {
 		}
 	}
 
-	async getCommentsByVideo(id: string) {
+	async getCommentsByVideoId(
+		id: string,
+		authHeader?: string,
+		refreshToken?: string
+	) {
 		const comments = await this.commentRepository.find({
 			where: {
 				video: {
@@ -150,23 +152,208 @@ export class CommentsService {
 			},
 			relations: {
 				...returnRelationComment,
-				replyComments: {
-					author: true,
-				},
 			},
 		})
 
-		return {
-			comments: comments.map(comment => ({
+		let accessData: any = null
+		let refreshData: any = null
+
+		if (authHeader && refreshToken) {
+			if (authHeader.startsWith('Bearer')) {
+				accessData = await this.jwtService.verifyAsync(authHeader.split(' ')[1])
+			}
+			refreshData = await this.jwtService.verifyAsync(refreshToken)
+		}
+
+		let resultComments: any[] = null
+
+		if (
+			accessData &&
+			refreshData &&
+			accessData?.userId &&
+			refreshData?.userId &&
+			accessData?.userId === refreshData?.userId
+		) {
+			const user = await this.userRepository.findOne({
+				where: { id: accessData?.userId },
+			})
+
+			if (!user) {
+				resultComments = comments.map(comment => ({
+					...comment,
+					author: comment.author.returnUser(),
+					countLike: comment.likeUsers.length,
+					countDisLike: comment.disLikeUsers.length,
+				}))
+			} else {
+				resultComments = comments.map(comment => ({
+					...comment,
+					author: comment.author.returnUser(),
+					countLike: comment.likeUsers.length,
+					countDisLike: comment.disLikeUsers.length,
+					isLike: comment.likeUsers.some(u => u.id === user.id),
+					isDisLike: comment.disLikeUsers.some(u => u.id === user.id),
+				}))
+			}
+		} else {
+			resultComments = comments.map(comment => ({
 				...comment,
 				author: comment.author.returnUser(),
-				likeUsers: comment.likeUsers.map(user => user.returnUser()),
+				countLike: comment.likeUsers.length,
+				countDisLike: comment.disLikeUsers.length,
+			}))
+		}
+
+		resultComments.forEach(c => {
+			delete c.likeUsers
+			delete c.disLikeUsers
+		})
+
+		return {
+			comments: resultComments,
+		}
+	}
+
+	async getReplyCommentsByCommentId(
+		id: string,
+		authHeader?: string,
+		refreshToken?: string
+	) {
+		const comments = await this.commentRepository.find({
+			where: {
+				mainComment: {
+					id,
+				},
+				type: 'reply-comment',
+			},
+			relations: {
+				...returnRelationComment,
+			},
+		})
+		let accessData: any = null
+		let refreshData: any = null
+
+		if (authHeader && refreshToken) {
+			if (authHeader.startsWith('Bearer')) {
+				accessData = await this.jwtService.verifyAsync(authHeader.split(' ')[1])
+			}
+			refreshData = await this.jwtService.verifyAsync(refreshToken)
+		}
+
+		let resultComments: any[] = null
+
+		if (
+			accessData &&
+			refreshData &&
+			accessData?.userId &&
+			refreshData?.userId &&
+			accessData?.userId === refreshData?.userId
+		) {
+			const user = await this.userRepository.findOne({
+				where: { id: accessData?.userId },
+			})
+
+			if (!user) {
+				resultComments = comments.map(comment => ({
+					...comment,
+					author: comment.author.returnUser(),
+					countLike: comment.likeUsers.length,
+					countDisLike: comment.disLikeUsers.length,
+				}))
+			} else {
+				resultComments = comments.map(comment => ({
+					...comment,
+					author: comment.author.returnUser(),
+					countLike: comment.likeUsers.length,
+					countDisLike: comment.disLikeUsers.length,
+					isLike: comment.likeUsers.some(u => u.id === user.id),
+					isDisLike: comment.disLikeUsers.some(u => u.id === user.id),
+				}))
+			}
+		} else {
+			resultComments = comments.map(comment => ({
+				...comment,
+				author: comment.author.returnUser(),
+				countLike: comment.likeUsers.length,
+				countDisLike: comment.disLikeUsers.length,
+			}))
+		}
+
+		resultComments.forEach(c => {
+			delete c.likeUsers
+			delete c.disLikeUsers
+		})
+
+		return {
+			comments: resultComments,
+		}
+	}
+
+	async toggleLikeComment(id: string, userId: string) {
+		const comment = await this.commentRepository.findOne({
+			where: { id },
+			relations: returnRelationComment,
+		})
+		if (!comment) throw new NotFoundException('Комментарий не найден')
+
+		const user = await this.userRepository.findOne({ where: { id: userId } })
+		if (!user) throw new NotFoundException('Пользователь не найден')
+
+		if (comment.likeUsers.some(user => user.id === userId)) {
+			comment.likeUsers = comment.likeUsers.filter(user => user.id !== userId)
+		} else {
+			comment.likeUsers = [...comment.likeUsers, user]
+
+			if (comment.disLikeUsers.some(user => user.id === userId)) {
+				comment.disLikeUsers = comment.disLikeUsers.filter(
+					user => user.id !== userId
+				)
+			}
+		}
+
+		await this.commentRepository.save(comment)
+
+		return {
+			comment: {
+				...comment,
+				author: comment.author.returnUser(),
 				disLikeUsers: comment.disLikeUsers.map(user => user.returnUser()),
-				replyComments: comment.replyComments.map(com => ({
-					...com,
-					author: com.author.returnUser(),
-				})),
-			})),
+				likeUsers: comment.likeUsers.map(user => user.returnUser()),
+			},
+		}
+	}
+
+	async toggleDisLikeComment(id: string, userId: string) {
+		const comment = await this.commentRepository.findOne({
+			where: { id },
+			relations: returnRelationComment,
+		})
+		if (!comment) throw new NotFoundException('Комментарий не найден')
+
+		const user = await this.userRepository.findOne({ where: { id: userId } })
+		if (!user) throw new NotFoundException('Пользователь не найден')
+
+		if (comment.disLikeUsers.some(user => user.id === userId)) {
+			comment.disLikeUsers = comment.disLikeUsers.filter(
+				user => user.id !== userId
+			)
+		} else {
+			comment.disLikeUsers = [...comment.disLikeUsers, user]
+
+			if (comment.likeUsers.some(user => user.id === userId)) {
+				comment.likeUsers = comment.likeUsers.filter(user => user.id !== userId)
+			}
+		}
+
+		await this.commentRepository.save(comment)
+
+		return {
+			comment: {
+				...comment,
+				author: comment.author.returnUser(),
+				disLikeUsers: comment.disLikeUsers.map(user => user.returnUser()),
+				likeUsers: comment.likeUsers.map(user => user.returnUser()),
+			},
 		}
 	}
 }

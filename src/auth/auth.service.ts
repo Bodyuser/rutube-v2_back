@@ -12,13 +12,12 @@ import { UserEntity } from 'src/users/entities/user.entity'
 import { JwtService } from '@nestjs/jwt'
 import { compare, genSalt, hash } from 'bcryptjs'
 import { ResetPasswordDto } from './dto/reset-password.dto'
-import { v4 } from 'uuid'
+import { v4, validate } from 'uuid'
 import { TokenPayload } from 'google-auth-library'
 import { FacebookDto } from './dto/facebook.dto'
 import { SendMailService } from 'src/send-mail/send-mail.service'
 import { TypeAuthEnum } from 'src/users/enums/type-auth.enum'
 import { generateName } from 'src/utils/generateName'
-import { returnRelationsUser } from 'src/users/returnRelationsUser'
 
 @Injectable()
 export class AuthService {
@@ -35,9 +34,7 @@ export class AuthService {
 		const tokens = await this.issueToken(user.id)
 
 		return {
-			user: {
-				...user.returnProfile(),
-			},
+			user: user.returnProfile(),
 			tokens,
 		}
 	}
@@ -79,7 +76,6 @@ export class AuthService {
 
 		const user = await this.userRepository.findOne({
 			where: { id: payload.userId },
-			relations: returnRelationsUser,
 		})
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
@@ -88,17 +84,18 @@ export class AuthService {
 		const tokens = await this.issueToken(user.id)
 
 		return {
-			user: {
-				...user.returnProfile(),
-				followers: user.followers.map(user => user.returnUser()),
-				following: user.following.map(user => user.returnUser()),
-			},
+			user: user.returnProfile(),
 			tokens,
 		}
 	}
 
 	async resetPassword(resetLink: string, resetPasswordDto: ResetPasswordDto) {
-		const user = await this.userRepository.findOne({ where: { resetLink } })
+		const isValid = validate(resetLink)
+		if (!isValid) throw new BadRequestException('Неверный формат ссылки')
+
+		const user = await this.userRepository.findOne({
+			where: { resetLink, typeAuth: TypeAuthEnum.DEFAULT },
+		})
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
 		const salt = await genSalt(10)
@@ -114,7 +111,11 @@ export class AuthService {
 	}
 
 	async checkResetLink(resetLink: string) {
-		const user = await this.userRepository.findOne({ where: { resetLink } })
+		const isValid = validate(resetLink)
+		if (!isValid) throw new BadRequestException('Неверный формат ссылки')
+		const user = await this.userRepository.findOne({
+			where: { resetLink, typeAuth: TypeAuthEnum.DEFAULT },
+		})
 		if (!user) throw new NotFoundException('Пользователь не найден')
 
 		return {
@@ -170,9 +171,7 @@ export class AuthService {
 			const tokens = await this.issueToken(existUser.id)
 
 			return {
-				user: {
-					...existUser.returnProfile(),
-				},
+				user: existUser.returnProfile(),
 				tokens,
 			}
 		}
@@ -211,9 +210,7 @@ export class AuthService {
 		if (existUser) {
 			const tokens = await this.issueToken(existUser.id)
 			return {
-				user: {
-					...existUser.returnProfile(),
-				},
+				user: existUser.returnProfile(),
 				tokens,
 			}
 		}
